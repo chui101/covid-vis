@@ -27,12 +27,14 @@ def doubling_time(fit):
     return numpy.log(2)/fit[0]
 
 def calculate_trends():
+    output = {'case7': {},'death': {},'case10' :{}}
     si = state_info()
     print("Average case doubling time in days for past 7 days of data")
     for state in si.get_states():
         data = state_historic_data(state)
         latest_data = data.get_latest_n(7)
         fit = case_growth_rate(latest_data)
+        output['case7'][str(state)] = str(doubling_time(fit))
         print(state + "," + str(doubling_time(fit)))
 
     print("Average death doubling time in days for past 7 days of data")
@@ -40,6 +42,7 @@ def calculate_trends():
         data = state_historic_data(state)
         latest_data = data.get_latest_n(7)
         fit = death_growth_rate(latest_data)
+        output["death"][str(state)]= str(doubling_time(fit))
         print(state + "," + str(doubling_time(fit)))
 
     print("Average case doubling time in days since 10th confirmed case")
@@ -47,27 +50,10 @@ def calculate_trends():
         data = state_historic_data(state)
         latest_data = data.get_after_n_cases(10)
         fit = death_growth_rate(latest_data)
+        output["case10"][str(state)] = str(doubling_time(fit))
         print(state + "," + str(doubling_time(fit)))
+
+    return output
 
 if __name__ == "__main__":
-    si = state_info()
-    print("Average case doubling time in days for past 7 days of data")
-    for state in si.get_states():
-        data = state_historic_data(state)
-        latest_data = data.get_latest_n(7)
-        fit = case_growth_rate(latest_data)
-        print(str(state) + "," + str(doubling_time(fit)))
-
-    print("Average death doubling time in days for past 7 days of data")
-    for state in si.get_states():
-        data = state_historic_data(state)
-        latest_data = data.get_latest_n(7)
-        fit = death_growth_rate(latest_data)
-        print(state + "," + str(doubling_time(fit)))
-
-    print("Average case doubling time in days since 10th confirmed case")
-    for state in si.get_states():
-        data = state_historic_data(state)
-        latest_data = data.get_after_n_cases(10)
-        fit = death_growth_rate(latest_data)
-        print(state + "," + str(doubling_time(fit)))
+    calculate_trends()
