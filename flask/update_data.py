@@ -25,8 +25,12 @@ def save_data(name,data):
     with open("data/" + name + ".json","w") as fp:
         json.dump(sorted_data,fp)
 
-if __name__ == "__main__":
+def update_data():
     si = state_info()
     for state in si.get_states():
         data = get_state_historic(state)
         save_data(state + "_historic", data)
+
+
+if __name__ == "__main__":
+    update_data()
