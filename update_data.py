@@ -2,7 +2,7 @@
 
 import urllib3
 import json
-from state_info import state_info
+from states import state_info
 
 def get_state_current(state):
     return get_api("https://covidtracking.com/api/states?state="+state)
@@ -21,8 +21,9 @@ def get_api(url):
     return response
 
 def save_data(name,data):
+    sorted_data = sorted(data, key=lambda x: x['date'])
     with open("data/" + name + ".json","w") as fp:
-        json.dump(data,fp)
+        json.dump(sorted_data,fp)
 
 if __name__ == "__main__":
     si = state_info()
