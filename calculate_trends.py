@@ -41,3 +41,10 @@ if __name__ == "__main__":
         latest_data = data.get_latest_n(7)
         fit = death_growth_rate(latest_data)
         print(state + "," + str(doubling_time(fit)))
+
+    print("Average case doubling time in days since 10th confirmed case")
+    for state in si.get_states():
+        data = state_historic_data(state)
+        latest_data = data.get_after_n_cases(10)
+        fit = death_growth_rate(latest_data)
+        print(state + "," + str(doubling_time(fit)))
