@@ -51,3 +51,28 @@ class state_historic_data:
         # slice array and return
         return self.data[last_index:]
 
+    def get_three_day_case_average(self):
+        """Get a moving three day average of cases"""
+        positives = list(map(lambda x: 0 if x['positive'] is None else x['positive'], ))
+        return three_day_average(positives)
+
+    def get_three_day_death_average(self):
+        """Get a moving three day average of deaths"""
+        positives = list(map(lambda x: 0 if x['positive'] is None else x['positive'], ))
+        return three_day_average(positives)
+
+def three_day_average(array):
+    averages = []
+    for i in range(len(array)):
+        sum = 0
+        num_in_average = 0
+        if i > 0:
+            sum += array[i-1]
+            num_in_average += 1
+        sum += array[i]
+        num_in_average += 1
+        if i < len(array) - 1:
+            sum += array[i+1]
+            num_in_average += 1
+        averages.append(sum/num_in_average)
+    return averages
