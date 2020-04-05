@@ -2,7 +2,6 @@ from datetime import datetime
 import numpy
 import calculate_trends
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 from states import state_historic_data, state_info
 
 def plot_states(states, data_name='positive', trendline=True, logarithmic=True, pop_adjusted=False, days=0, filename=None):
@@ -24,7 +23,7 @@ def plot_states(states, data_name='positive', trendline=True, logarithmic=True, 
 
         plt.plot(dates, cases, "C"+str(index)+"o", label=state)
         if trendline:
-            (r,a) = calculate_trends.weighted_exponential_fit(numpy.array(range(len(cases))), cases)
+            (r,a) = calculate_trends.weighted_exponential_fit(numpy.arange(len(cases)), cases)
             fit_y = numpy.exp(a) * numpy.exp(r * numpy.arange(len(cases)))
             plt.plot(dates, fit_y, "C"+str(index)+"--", label=state + "(exponential, rate=%0.4f)"%r)
         index += 1
@@ -38,7 +37,7 @@ def plot_states(states, data_name='positive', trendline=True, logarithmic=True, 
     if filename is None:
         plt.show()
     else:
-        fig.savefig(filename, dpi=100)
+        fig.savefig("output/" + filename, dpi=100)
 
 if __name__ == "__main__":
     plot_states(['KY',"TN","NY","IN","LA","OH"], data_name="positive", trendline=True, logarithmic=True, pop_adjusted=True, days=10)

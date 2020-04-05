@@ -6,13 +6,13 @@ def case_growth_rate(data):
     positives = map(lambda x: 0 if x['positive'] is None else x['positive'], data)
     nonzero = filter(lambda x: x > 0, positives)
     y = numpy.array(list(nonzero))
-    return weighted_exponential_fit(numpy.array(range(len(y))), y)
+    return weighted_exponential_fit(numpy.arange(len(y)), y)
 
 def death_growth_rate(data):
     deaths = map(lambda x: 0 if x['death'] is None else x['death'], data)
     nonzero = filter(lambda x: x > 0, deaths)
     y = numpy.array(list(nonzero))
-    return weighted_exponential_fit(numpy.array(range(len(y))), y)
+    return weighted_exponential_fit(numpy.arange(len(y)), y)
 
 def exponential_fit(x, y):
     return numpy.polyfit(x,numpy.log(y),1)
