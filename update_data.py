@@ -16,7 +16,7 @@ def get_api(url):
     if request.status == 200:
         response = json.loads(request.data)
     else:
-        print("ERROR: Could not read API data, got status " + str(hr.status) + " " + hr.reason)
+        print("ERROR: Could not read API data, got status " + str(request.status) + " " + request.reason)
         response = {}
     return response
 
