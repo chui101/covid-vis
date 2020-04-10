@@ -1,6 +1,7 @@
 from scipy.integrate import odeint
 import numpy
 from matplotlib import pyplot as mpl
+from states import three_day_average
 
 def sir_model(y,t,N,beta,gamma):
     S,I,R = y
@@ -18,18 +19,18 @@ def sir_integrate(init, time, params):
 
 def model_error(real_data, model_data):
     if len(real_data) < len(model_data):
-        delta = numpy.sqrt(numpy.array(real_data)) - numpy.sqrt(numpy.array(model_data[:len(real_data)]))
+        delta = numpy.array(real_data) - numpy.array(model_data[:len(real_data)])
     else:
-        delta = numpy.sqrt(numpy.array(real_data[:len(model_data)])) - numpy.sqrt(numpy.array(model_data))
-    return numpy.sqrt(numpy.sum(delta**2) / len(delta))
+        delta = numpy.array(real_data[:len(model_data)]) - numpy.array(model_data)
+    return numpy.sum(delta**2)/100
 
 def sir_gradient_descent(model_init, model_time, initial_params, real_data):
     Sinit, Iinit, Rinit = model_init
     b,g = initial_params
     b_learning_rate = 0.0001
     b_threshold = 0.000001
-    S_learning_rate = 100000
-    S_threshold = 10
+    S_learning_rate = 10000
+    S_threshold = 1
     iteration = 0
     S, I, R = sir_integrate((Sinit, Iinit, Rinit), model_time, (b,g))
     error = model_error(real_data, I)
@@ -87,11 +88,13 @@ def sir_gradient_descent(model_init, model_time, initial_params, real_data):
 
 if __name__ == "__main__":
     init = (4467572,99,2)
-    ky_pos = [99, 104, 124, 157, 198, 248, 302, 394, 439, 480, 591, 680, 770, 831, 917, 955, 1008, 1149]
-    b,g,S,I,R = sir_gradient_descent(init, 100, (0.5,1/14), ky_pos)
-    mpl.plot(range(len(ky_pos)), ky_pos, 'ro', label="Positive")
+    ky_pos = [99,104,124,157,198,248,302,394,439,480,591,680,770,831,917,955,1008,1149,1346,1452]
+    #ky_pos = three_day_average(ky_pos)
+    b,g,S,I,R = sir_gradient_descent(init, 100, (0.3,0.2), ky_pos)
+    mpl.plot(range(len(ky_pos)), ky_pos, 'ro', label="Reported Positive Cases")
     mpl.plot(range(len(I)), I, 'b.-', label="Predicted")
     mpl.title("KY Predicted infections over time using SIR model")
     mpl.xlabel("Days since 100 cases")
+    mpl.legend()
     mpl.show()
     mpl.close()
