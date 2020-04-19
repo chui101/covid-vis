@@ -162,11 +162,10 @@ def projection_deaths(population, deaths, bootstrap_date, forecast_time=150, soc
 
 if __name__ == "__main__":
     state = "KY"
-    bootstrap_date = datetime.date(year=2020, month=3, day=18)
-
     si = state_info()
     pop = si.get_population(state)
     data = state_historic_data(state).get_latest_n(31)
+    bootstrap_date = datetime.datetime.strptime(str(data[0]['date']),'%Y%m%d').date()
     positive = list(map(lambda x: x['positive'], data))
     death = list(map(lambda x: x['death'], data))
 
