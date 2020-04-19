@@ -1,8 +1,9 @@
 from scipy.integrate import odeint
 import numpy
 from matplotlib import pyplot as mpl
-from states import three_day_average
+from states import three_day_average, state_historic_data, state_info
 import datetime
+
 
 def sir_model(y,t,N,beta,gamma):
     S,I,R = y
@@ -11,6 +12,7 @@ def sir_model(y,t,N,beta,gamma):
     dRdt = gamma * I
     return dSdt, dIdt, dRdt
 
+
 def sir_integrate(init, time, params):
     Sinit, Iinit, Rinit = init
     population = Sinit + Iinit + Rinit
@@ -18,30 +20,32 @@ def sir_integrate(init, time, params):
     model = odeint(sir_model, init, numpy.arange(time), args=(population, beta, gamma))
     return model.T
 
+
 def model_error(real_data, model_data):
     if len(real_data) < len(model_data):
         delta = numpy.array(real_data) - numpy.array(model_data[:len(real_data)])
     else:
         delta = numpy.array(real_data[:len(model_data)]) - numpy.array(model_data)
-    return numpy.sum(delta**2)/100
+    return numpy.sum(delta**2)/100000
+
 
 def sir_gradient_descent(model_init, model_time, initial_params, real_data):
     Sinit, Iinit, Rinit = model_init
     b,g = initial_params
-    b_learning_rate = 0.0001
+    b_learning_rate = 0.001
     b_threshold = 0.000001
     S_learning_rate = 10000
     S_threshold = 1
     iteration = 0
     S, I, R = sir_integrate((Sinit, Iinit, Rinit), model_time, (b,g))
-    error = model_error(real_data, I)
+    error = model_error(real_data, I+R)
     while (b_learning_rate > b_threshold or S_learning_rate > S_threshold) and iteration < 10000:
         print("iteration {i:d}: beta={b:f}, Sinit={S:f} => error={e:f}".format(i=iteration, b=b, S=Sinit, e=error))
         iteration = iteration + 1
 
         # search cardinal directions on the b, S axis to find the next step
         S1,I1,R1 = sir_integrate((Sinit, Iinit, Rinit), model_time, (b + (b_learning_rate * error), g))
-        error1 = model_error(real_data, I1)
+        error1 = model_error(real_data, I1+R1)
         grad1 = (error1 - error)/b_learning_rate
 
         # S2,I2,R2 = sir_integrate((Sinit + (S_learning_rate * error), Iinit, Rinit), model_time, (b, g))
@@ -49,7 +53,7 @@ def sir_gradient_descent(model_init, model_time, initial_params, real_data):
         # grad2 = (error2 - error)/S_learning_rate
 
         S3,I3,R3 = sir_integrate((Sinit, Iinit, Rinit), model_time, (b - (b_learning_rate * error), g))
-        error3 = model_error(real_data, I3)
+        error3 = model_error(real_data, I3+R3)
         grad3 = (error3 - error)/b_learning_rate
 
         # S4,I4,R4 = sir_integrate((Sinit - (S_learning_rate * error), Iinit, Rinit), model_time, (b, g))
@@ -88,31 +92,85 @@ def sir_gradient_descent(model_init, model_time, initial_params, real_data):
     print("iteration {i:d}: beta={b:f}, Sinit={S:f} => error={e:f}".format(i=iteration, b=b, S=Sinit, e=error))
     return b,Sinit,S,I,R
 
-def sir_fit_data(dates, data, s_init, i_init, r_init, moving_average=False, additional_label_text="", plot_format="b.=", time=100):
+
+def sir_fit_data(dates, data, s_init, i_init, r_init, moving_average=False, additional_label_text="", plot_color="b.-", time=100):
     bootstrap_data = data
     if moving_average:
         bootstrap_data = three_day_average(bootstrap_data)
-    b,g,S,I,R = sir_gradient_descent((s_init, i_init, r_init), time, (0.3,0.15), bootstrap_data)
-    mpl.plot(dates, I, plot_format, label="Predicted Infections"+additional_label_text)
+    b,Sinit,S,I,R = sir_gradient_descent((s_init, i_init, r_init), time, (0.4,0.15), bootstrap_data)
+    mpl.plot(dates, I+R, plot_color + '.-', label="Predicted Cumulative Infections"+additional_label_text)
+    mpl.plot(dates, I, plot_color + ',-', label="Predicted Active Infections"+additional_label_text)
     mpl.legend()
     fig = mpl.gcf()
     fig.set_size_inches(10, 7)
+    return b,Sinit,S,I,R
 
 
-if __name__ == "__main__":
-    Sinit, Iinit, Rinit =(4467572,99,2)
-    ky_pos = [99,104,124,157,198,248,302,394,439,480,591,680,770,831,917,955,1008,1149,1346,1452]
-    forecast_time = 100
+def projection_cumulative_cases(population, cases, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9):
+    Sinit = population - cases[0]
+    Iinit = cases[0] - deaths[0]
+    Rinit = deaths[0]
 
-    bootstrap_date = datetime.date(year=2020, month=3, day=22)
     date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
-    mpl.plot(date_list[:len(ky_pos)], ky_pos, 'ro', label="Reported Infections")
+    mpl.plot(date_list[:len(cases)], cases, 'ro', label="Reported Infections")
 
-    sir_fit_data(date_list, ky_pos, Sinit*.5, Iinit, Rinit, time=forecast_time, additional_label_text=", 50% social distancing", plot_format="C0.-")
-    sir_fit_data(date_list, ky_pos, Sinit*.25, Iinit, Rinit, time=forecast_time, additional_label_text=", 75% social distancing", plot_format="C1.-")
-    sir_fit_data(date_list, ky_pos, Sinit*.1, Iinit, Rinit, time=forecast_time, additional_label_text=", 90% social distancing", plot_format="C2.-")
-    sir_fit_data(date_list, ky_pos, Sinit*.05, Iinit, Rinit, time=forecast_time, additional_label_text=", 95% social distancing", plot_format="C3.-")
-    mpl.title("KY Predicted infections over time using SIR model, γ=0.15\nGradient descent on β to fit existing data")
+    b,Sinit,S,I,R = sir_fit_data(date_list, cases, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
+    mpl.title("KY Predicted infections over time \nUsing SIR model, β=%0.2f, γ=0.15"%b)
     mpl.grid(b=True)
+    ax = mpl.gca()
+    #ax.set_yscale("log")
     mpl.show()
     mpl.close()
+
+
+def projection_undertesting_cases(population, cases, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, testing_coverage=0.2):
+    cumulative_infected = numpy.array(cases)/testing_coverage
+    Sinit = population - cumulative_infected[0]
+    Iinit = cumulative_infected[0] - deaths[0]
+    Rinit = deaths[0]
+
+    date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
+    mpl.plot(date_list[:len(cumulative_infected)], cumulative_infected, 'ro', label="Estimated Infections")
+    mpl.plot(date_list[:len(cases)], cases, 'g-', label="Reported Infections")
+
+    b,Sinit,S,I,R = sir_fit_data(date_list, cumulative_infected, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
+    mpl.title("KY Predicted infections over time assuming %d%% testing coverage\nUsing SIR model, β=%0.2f, γ=0.15"%(testing_coverage*100,b))
+    mpl.grid(b=True)
+    ax = mpl.gca()
+    #ax.set_yscale("log")
+    mpl.show()
+    mpl.close()
+
+
+def projection_deaths(population, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, mortality_rate=0.05):
+    cumulative_infected = numpy.array(deaths)/mortality_rate
+    Sinit = population - cumulative_infected[0]
+    Iinit = cumulative_infected[0] - deaths[0]
+    Rinit = deaths[0]
+
+    date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
+    mpl.plot(date_list[:len(cumulative_infected)], cumulative_infected, 'ro', label="Estimated Infections")
+    mpl.plot(date_list[:len(deaths)], deaths, 'g-', label="Reported Deaths")
+
+    b,Sinit,S,I,R=sir_fit_data(date_list, cumulative_infected, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
+    mpl.title("KY Predicted infections over time based on death count, assuming %d%% mortality\nUsing SIR model, β=%0.2f, γ=0.15"%(mortality_rate*100,b))
+    mpl.grid(b=True)
+    ax = mpl.gca()
+    #ax.set_yscale("log")
+    mpl.show()
+    mpl.close()
+
+if __name__ == "__main__":
+    state = "KY"
+    bootstrap_date = datetime.date(year=2020, month=3, day=18)
+
+    si = state_info()
+    pop = si.get_population(state)
+    data = state_historic_data(state).get_latest_n(31)
+    positive = list(map(lambda x: x['positive'], data))
+    death = list(map(lambda x: x['death'], data))
+
+
+    projection_cumulative_cases(pop, positive, death, bootstrap_date, social_distancing_factor=0.90)
+    projection_undertesting_cases(pop, positive, death, bootstrap_date, social_distancing_factor=0.90, testing_coverage=0.2)
+    projection_deaths(pop, death, bootstrap_date, social_distancing_factor=0.90, mortality_rate=0.02)

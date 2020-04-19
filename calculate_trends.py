@@ -57,6 +57,7 @@ if __name__ == "__main__":
     pyplot.ylabel("Average case doubling time (days)")
     pyplot.xlabel("Days since first reported case")
     pyplot.legend()
+    pyplot.grid(b=True)
     fig = pyplot.gcf()
     fig.set_size_inches(10, 7)
     pyplot.show()
