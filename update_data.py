@@ -5,10 +5,10 @@ import json
 from states import state_info
 
 def get_state_current(state):
-    return get_api("https://covidtracking.com/api/states?state="+state)
+    return get_api("https://covidtracking.com/api/v1/states/"+state+"/current.json")
 
 def get_state_historic(state):
-    return get_api("https://covidtracking.com/api/states/daily?state="+state)
+    return get_api("https://covidtracking.com/api/v1/states/"+state+"/daily.json")
 
 def get_api(url):
     http = urllib3.PoolManager()

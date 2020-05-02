@@ -58,5 +58,25 @@
     "name": "Oregon",
     "area": 95988,
     "population": 4217737
+  },
+  "MI": {
+    "name": "Michigan",
+    "area": 56539,
+    "population": 9986857
+  },
+  "GA": {
+    "name": "Georgia",
+    "area": 57513,
+    "population": 10617423
+  },
+  "AL": {
+    "name": "Alabama",
+    "area": 50645,
+    "population": 4903185
+  },
+  "FL": {
+    "name": "Florida",
+    "area": 53625,
+    "population": 21477737
   }
 }
