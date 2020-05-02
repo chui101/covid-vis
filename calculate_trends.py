@@ -46,7 +46,7 @@ if __name__ == "__main__":
     pyplot.close()
 
     # calculate doubling time for each seven day window for all tracked states
-    for state in ['KY',"TN","NY","IN","LA","OH"]:
+    for state in ['KY',"TN","NY","IN","LA","OH", "MI"]:
         data = state_historic_data(state).data
         doubling_time_last_seven = []
         if len(data) > 7:

@@ -97,7 +97,7 @@ def sir_fit_data(dates, data, s_init, i_init, r_init, moving_average=False, addi
     bootstrap_data = data
     if moving_average:
         bootstrap_data = three_day_average(bootstrap_data)
-    b,Sinit,S,I,R = sir_gradient_descent((s_init, i_init, r_init), time, (0.4,0.15), bootstrap_data)
+    b,Sinit,S,I,R = sir_gradient_descent((s_init, i_init, r_init), time, (0.2,0.15), bootstrap_data)
     mpl.plot(dates, I+R, plot_color + '.-', label="Predicted Cumulative Infections"+additional_label_text)
     mpl.plot(dates, I, plot_color + ',-', label="Predicted Active Infections"+additional_label_text)
     mpl.legend()
@@ -106,10 +106,10 @@ def sir_fit_data(dates, data, s_init, i_init, r_init, moving_average=False, addi
     return b,Sinit,S,I,R
 
 
-def projection_cumulative_cases(population, cases, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9):
-    Sinit = population - cases[0]
+def projection_cumulative_cases(population, cases, deaths, recovered, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, logarithmic=False):
+    Sinit = population - cases[0] - recovered[0]
     Iinit = cases[0] - deaths[0]
-    Rinit = deaths[0]
+    Rinit = recovered[0] + deaths[0]
 
     date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
     mpl.plot(date_list[:len(cases)], cases, 'ro', label="Reported Infections")
@@ -117,17 +117,17 @@ def projection_cumulative_cases(population, cases, deaths, bootstrap_date, forec
     b,Sinit,S,I,R = sir_fit_data(date_list, cases, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
     mpl.title("KY Predicted infections over time \nUsing SIR model, β=%0.2f, γ=0.15"%b)
     mpl.grid(b=True)
-    ax = mpl.gca()
-    #ax.set_yscale("log")
+    if logarithmic:
+        mpl.gca().set_yscale("log")
     mpl.show()
     mpl.close()
 
 
-def projection_undertesting_cases(population, cases, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, testing_coverage=0.2):
+def projection_undertesting_cases(population, cases, deaths, recovered, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, testing_coverage=0.2, logarithmic=False):
     cumulative_infected = numpy.array(cases)/testing_coverage
-    Sinit = population - cumulative_infected[0]
+    Sinit = population - cumulative_infected[0] - (recovered[0]/testing_coverage)
     Iinit = cumulative_infected[0] - deaths[0]
-    Rinit = deaths[0]
+    Rinit = recovered[0] + deaths[0]
 
     date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
     mpl.plot(date_list[:len(cumulative_infected)], cumulative_infected, 'ro', label="Estimated Infections")
@@ -136,27 +136,27 @@ def projection_undertesting_cases(population, cases, deaths, bootstrap_date, for
     b,Sinit,S,I,R = sir_fit_data(date_list, cumulative_infected, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
     mpl.title("KY Predicted infections over time assuming %d%% testing coverage\nUsing SIR model, β=%0.2f, γ=0.15"%(testing_coverage*100,b))
     mpl.grid(b=True)
-    ax = mpl.gca()
-    #ax.set_yscale("log")
+    if logarithmic:
+        mpl.gca().set_yscale("log")
     mpl.show()
     mpl.close()
 
 
-def projection_deaths(population, deaths, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, mortality_rate=0.05):
+def projection_deaths(population, deaths, recovered, bootstrap_date, forecast_time=150, social_distancing_factor=0.9, mortality_rate=0.05, logarithmic=False):
     cumulative_infected = numpy.array(deaths)/mortality_rate
-    Sinit = population - cumulative_infected[0]
+    Sinit = population - cumulative_infected[0] - recovered[0]
     Iinit = cumulative_infected[0] - deaths[0]
-    Rinit = deaths[0]
+    Rinit = recovered[0] + deaths[0]
 
     date_list = [bootstrap_date + datetime.timedelta(days=x) for x in range(forecast_time)]
     mpl.plot(date_list[:len(cumulative_infected)], cumulative_infected, 'ro', label="Estimated Infections")
     mpl.plot(date_list[:len(deaths)], deaths, 'g-', label="Reported Deaths")
 
     b,Sinit,S,I,R=sir_fit_data(date_list, cumulative_infected, Sinit*(1-social_distancing_factor), Iinit, Rinit, time=forecast_time, additional_label_text=", " + str(social_distancing_factor*100) + "% social distancing", plot_color="C0")
-    mpl.title("KY Predicted infections over time based on death count, assuming %d%% mortality\nUsing SIR model, β=%0.2f, γ=0.15"%(mortality_rate*100,b))
+    mpl.title("KY Predicted infections over time based on death count, assuming %.1f%% mortality\nUsing SIR model, β=%0.2f, γ=0.15"%(mortality_rate*100,b))
     mpl.grid(b=True)
-    ax = mpl.gca()
-    #ax.set_yscale("log")
+    if logarithmic:
+        mpl.gca().set_yscale("log")
     mpl.show()
     mpl.close()
 
@@ -164,12 +164,13 @@ if __name__ == "__main__":
     state = "KY"
     si = state_info()
     pop = si.get_population(state)
-    data = state_historic_data(state).get_latest_n(31)
+    data = state_historic_data(state).get_latest_n(45)
     bootstrap_date = datetime.datetime.strptime(str(data[0]['date']),'%Y%m%d').date()
-    positive = list(map(lambda x: x['positive'], data))
-    death = list(map(lambda x: x['death'], data))
+    positive = list(map(lambda x: 0 if 'positive' not in x or x['positive'] is None else x['positive'], data))
+    death = list(map(lambda x: 0 if 'death' not in x or x['death'] is None else x['death'], data))
+    recovered = list(map(lambda x: 0 if 'recovered' not in x or x['recovered'] is None else x['recovered'], data))
 
-
-    projection_cumulative_cases(pop, positive, death, bootstrap_date, social_distancing_factor=0.90)
-    projection_undertesting_cases(pop, positive, death, bootstrap_date, social_distancing_factor=0.90, testing_coverage=0.2)
-    projection_deaths(pop, death, bootstrap_date, social_distancing_factor=0.90, mortality_rate=0.02)
+    projection_cumulative_cases(pop, positive, death, recovered, bootstrap_date, social_distancing_factor=0.98)
+    projection_undertesting_cases(pop, positive, death, recovered, bootstrap_date, social_distancing_factor=0.985, testing_coverage=0.1)
+    projection_undertesting_cases(pop, positive, death, recovered, bootstrap_date, social_distancing_factor=0.98, testing_coverage=0.1)
+    projection_deaths(pop, death, recovered, bootstrap_date, social_distancing_factor=0.98, mortality_rate=0.02)

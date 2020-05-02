@@ -46,7 +46,7 @@ class state_historic_data:
         # find the index where the state meets the threshold
         last_index = len(self.data)-1
         for i in range(len(self.data)-1,-1,-1):
-            if self.data[i]['positive'] >= n:
+            if 'positive' in self.data[i] and self.data[i]['positive'] is not None and self.data[i]['positive'] >= n:
                 last_index = i
         # slice array and return
         return self.data[last_index:]

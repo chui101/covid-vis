@@ -4,6 +4,7 @@ import calculate_trends
 import matplotlib.pyplot as plt
 from states import state_historic_data, state_info
 
+
 def plot_states_trend(states, data_name='positive', trendline=True, logarithmic=True, pop_adjusted=False, days=0, filename=None):
     index = 0
     si = state_info()
@@ -15,7 +16,7 @@ def plot_states_trend(states, data_name='positive', trendline=True, logarithmic=
             data_points = data_handle.get_after_n_cases(1)
 
         dates = list(map(lambda x: datetime.strptime(str(x['date']),"%Y%m%d").date(), data_points))
-        cases = list(map(lambda x: x[data_name], data_points))
+        cases = list(map(lambda x: x[data_name] if data_name in x and x[data_name] is not None else 0, data_points))
 
         if pop_adjusted:
             population = si.get_population(state)
@@ -25,9 +26,9 @@ def plot_states_trend(states, data_name='positive', trendline=True, logarithmic=
         if trendline:
             fit_y = numpy.exp(a) * numpy.exp(r * numpy.arange(len(cases)))
             plt.plot(dates, fit_y, "C"+str(index)+"--")
-            plt.plot(dates, cases, "C"+str(index)+"o", label=state + " (rate=%0.4f)"%r)
+            plt.plot(dates, cases, "C"+str(index)+"o", label=si.get_name(state) + " (rate=%0.4f)"%r)
         else:
-            plt.plot(dates, cases, "C"+str(index)+".-", label=state + " (rate=%0.4f)"%r)
+            plt.plot(dates, cases, "C"+str(index)+".-", label=si.get_name(state) + " (rate=%0.4f)"%r)
         index += 1
 
     if logarithmic:
@@ -54,6 +55,7 @@ def plot_states_trend(states, data_name='positive', trendline=True, logarithmic=
     else:
         fig.savefig("output/" + filename, dpi=100)
 
+
 def plot_states_growth(states, data_name="positive", logarithmic=True, threshold=100, filename=None):
     index = 0
     si = state_info()
@@ -71,7 +73,7 @@ def plot_states_growth(states, data_name="positive", logarithmic=True, threshold
         if max_data < max(data):
             max_data = max(data)
 
-        plt.plot(dates, data, "C"+str(index)+".-", label=state)
+        plt.plot(dates, data, "C"+str(index)+".-", label=si.get_name(state))
         index += 1
 
     for double_time in [1,2,3,5,10]:
@@ -97,18 +99,22 @@ def plot_states_growth(states, data_name="positive", logarithmic=True, threshold
     else:
         fig.savefig("output/" + filename, dpi=100)
 
-def plot_pos_test_rate(states, threshold=10, filename=None):
+
+def plot_pos_test_rate(states, threshold=10, filename=None, days=0):
     index = 0
     si = state_info()
     for state in states:
         data_handle = state_historic_data(state)
-        data_points = data_handle.get_after_n_cases(threshold)
+        if days == 0:
+            data_points = data_handle.data;
+        else:
+            data_points = data_handle.get_latest_n(days)
 
         dates = list(map(lambda x: datetime.strptime(str(x['date']),"%Y%m%d").date(), data_points))
         positive = numpy.array(list((map(lambda x: 0 if ('positive' not in x or x['positive'] is None) else x['positive'], data_points))))
         total = numpy.array(list((map(lambda x: 1 if ('total' not in x or x['total'] is None) else x['total'], data_points))))
         pos_test_rate = positive/total * 100
-        plt.plot(dates, pos_test_rate, "C"+str(index)+".-", label=state)
+        plt.plot(dates, pos_test_rate, "C"+str(index)+".-", label=si.get_name(state))
         index += 1
     plt.legend()
     plt.title("Positive Test Rate Trend by State")
@@ -122,18 +128,22 @@ def plot_pos_test_rate(states, threshold=10, filename=None):
     else:
         fig.savefig("output/" + filename, dpi=100)
 
-def plot_mortality_rate(states, threshold=2.5, filename=None):
+
+def plot_mortality_rate(states, threshold=2.5, filename=None, days=0):
     index = 0
     si = state_info()
     for state in states:
         data_handle = state_historic_data(state)
-        data_points = data_handle.get_after_n_cases(threshold)
+        if days == 0:
+            data_points = data_handle.data;
+        else:
+            data_points = data_handle.get_latest_n(days)
 
         dates = list(map(lambda x: datetime.strptime(str(x['date']),"%Y%m%d").date(), data_points))
         death = numpy.array(list((map(lambda x: 0 if ('death' not in x or x['death'] is None) else x['death'], data_points))))
         positive = numpy.array(list((map(lambda x: 1 if ('positive' not in x or x['positive'] is None) else x['positive'], data_points))))
         mortality_rate = death/positive * 100
-        plt.plot(dates, mortality_rate, "C"+str(index)+".-", label=state)
+        plt.plot(dates, mortality_rate, "C"+str(index)+".-", label=si.get_name(state))
         index += 1
     plt.legend()
     plt.title("Mortality Rate Trend by State")
@@ -147,10 +157,11 @@ def plot_mortality_rate(states, threshold=2.5, filename=None):
     else:
         fig.savefig("output/" + filename, dpi=100)
 
+
 if __name__ == "__main__":
-    states = ['KY',"TN","NY","IN","LA","OH","WA","OR"]
+    states = ['KY',"TN","NY","IN","GA","OH","FL","AL"]
     plot_states_trend(states, data_name="positive", trendline=False, logarithmic=True, pop_adjusted=True, days=0)
     plot_states_trend(states, data_name="positive", trendline=True, logarithmic=True, pop_adjusted=False, days=10)
     plot_states_growth(states, data_name="positive", logarithmic=True, threshold=100)
-    plot_pos_test_rate(states)
-    plot_mortality_rate(states)
+    plot_pos_test_rate(states, days=30)
+    plot_mortality_rate(states, days=30)
